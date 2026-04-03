@@ -3,45 +3,33 @@ package vyacheslav.pogudin.intervaltimer
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import vyacheslav.pogudin.intervaltimer.ui.theme.IntervalTimerTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import vyacheslav.pogudin.intervaltimer.data.api.ApiFactory
+import vyacheslav.pogudin.intervaltimer.data.repository.TimerRepository
+import vyacheslav.pogudin.intervaltimer.domain.model.Timer
+import vyacheslav.pogudin.intervaltimer.ui.load.LoadScreen
+import vyacheslav.pogudin.intervaltimer.ui.load.LoadViewModel
+import vyacheslav.pogudin.intervaltimer.ui.workout.WorkoutScreen
+import vyacheslav.pogudin.intervaltimer.ui.workout.WorkoutViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+
+        val repo = TimerRepository(ApiFactory.create())
+        val loadVm = LoadViewModel(repo)
+
         setContent {
-            IntervalTimerTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+            var timer by remember { mutableStateOf<Timer?>(null) }
+
+            if (timer == null) {
+                LoadScreen(loadVm) { timer = it }
+            } else {
+                WorkoutScreen(WorkoutViewModel(timer!!))
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    IntervalTimerTheme {
-        Greeting("Android")
     }
 }

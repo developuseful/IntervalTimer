@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.*
+import kotlinx.coroutines.delay
 import vyacheslav.pogudin.intervaltimer.data.repository.TimerRepository
 import vyacheslav.pogudin.intervaltimer.domain.model.Timer
 
@@ -16,14 +17,19 @@ class LoadViewModel(private val repo: TimerRepository) : ViewModel() {
     fun load() {
         viewModelScope.launch {
             loading = true
+            delay(1000)
             error = null
             try {
                 timer = repo.getTimer(id.toInt())
             } catch (e: Exception) {
-                error = "Ошибка загрузки"
+                error = "Тренировка не найдена. Проверьте ID."
             } finally {
                 loading = false
             }
         }
+    }
+
+    fun clearError() {
+        error = null
     }
 }

@@ -36,6 +36,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,9 +52,11 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
 import vyacheslav.pogudin.intervaltimer.R
 import vyacheslav.pogudin.intervaltimer.domain.model.Interval
+import vyacheslav.pogudin.intervaltimer.util.SoundManager
 import vyacheslav.pogudin.intervaltimer.ui.theme.CardBg
 import vyacheslav.pogudin.intervaltimer.ui.theme.ErrorRed
 import vyacheslav.pogudin.intervaltimer.ui.theme.GreyLight
@@ -163,6 +171,29 @@ fun WorkoutScreen(
     }
 
     val progress = if (total > 0) elapsed / total.toFloat() else 0f
+
+    val context = LocalContext.current
+    val soundManager = remember { SoundManager(context) }
+    var previousPhase by remember { mutableStateOf(WorkoutPhase.Ready) }
+    var previousIntervalIndex by remember { mutableStateOf(-1) }
+    val currentInterval = currentIntervalIndex(elapsed, intervals, total)
+
+    LaunchedEffect(phase, currentInterval) {
+        when {
+            phase == WorkoutPhase.Running && previousPhase == WorkoutPhase.Ready -> soundManager.playStart()
+            phase == WorkoutPhase.Running && previousPhase == WorkoutPhase.Running &&
+                    currentInterval != previousIntervalIndex -> soundManager.playInterval()
+            phase == WorkoutPhase.Finished && previousPhase != WorkoutPhase.Finished -> soundManager.playEnd()
+        }
+        previousPhase = phase
+        previousIntervalIndex = currentInterval
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            soundManager.release()
+        }
+    }
 
     Scaffold(
         containerColor = ScreenBg,

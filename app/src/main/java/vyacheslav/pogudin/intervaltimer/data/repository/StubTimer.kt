@@ -8,7 +8,7 @@ import vyacheslav.pogudin.intervaltimer.domain.model.Timer
  * Для загрузки с API установите [ENABLED] в `false`.
  */
 object StubTimer {
-    const val ENABLED = false
+    const val ENABLED = true
 
     val sample: Timer = Timer(
         id = 0,

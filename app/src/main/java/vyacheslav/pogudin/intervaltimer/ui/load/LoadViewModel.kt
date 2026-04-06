@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.*
 import kotlinx.coroutines.delay
+import vyacheslav.pogudin.intervaltimer.data.repository.StubTimer
 import vyacheslav.pogudin.intervaltimer.data.repository.TimerRepository
 import vyacheslav.pogudin.intervaltimer.domain.model.Timer
 
@@ -13,6 +14,7 @@ class LoadViewModel(private val repo: TimerRepository) : ViewModel() {
     var loading by mutableStateOf(false)
     var error by mutableStateOf<String?>(null)
     var timer by mutableStateOf<Timer?>(null)
+    var useTestWorkout by mutableStateOf(StubTimer.ENABLED)
 
     fun load() {
         viewModelScope.launch {
@@ -31,5 +33,10 @@ class LoadViewModel(private val repo: TimerRepository) : ViewModel() {
 
     fun clearError() {
         error = null
+    }
+
+    fun updateTestWorkout(enabled: Boolean) {
+        useTestWorkout = enabled
+        StubTimer.ENABLED = enabled
     }
 }

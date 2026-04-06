@@ -8,15 +8,16 @@ import vyacheslav.pogudin.intervaltimer.domain.model.Timer
  * Для загрузки с API установите [ENABLED] в `false`.
  */
 object StubTimer {
-    const val ENABLED = true
+    var ENABLED = true
 
     val sample: Timer = Timer(
         id = 0,
-        title = "Тест: два интервала по 15 с",
+        title = "Тест: три интервала",
         totalTime = 30,
         intervals = listOf(
-            Interval("Интервал 1", 15),
-            Interval("Интервал 2", 15)
+            Interval("Интервал 1", 5),
+            Interval("Интервал 2", 10),
+            Interval("Интервал 3", 15)
         )
     )
 }

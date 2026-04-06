@@ -173,6 +173,32 @@ fun LoadScreen(
                         Text(if (vm.error != null) "Повторить" else "Загрузить")
                     }
                 }
+                Spacer(Modifier.height(20.dp))
+
+                // Переключатель тестовой тренировки
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                        //.padding(horizontal = 28.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Использовать тестовую тренировку",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextPrimary
+                    )
+                    Switch(
+                        checked = vm.useTestWorkout,
+                        onCheckedChange = { vm.updateTestWorkout(it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = GreenPrimary,
+                            uncheckedThumbColor = Color.White,
+                            uncheckedTrackColor = Color.Gray
+                        )
+                    )
+                }
             }
 
         }

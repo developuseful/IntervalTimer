@@ -9,12 +9,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -39,6 +36,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import vyacheslav.pogudin.intervaltimer.domain.model.Interval
+import vyacheslav.pogudin.intervaltimer.service.WorkoutPhase
 import vyacheslav.pogudin.intervaltimer.ui.theme.BorderDefault
 import vyacheslav.pogudin.intervaltimer.ui.theme.IntervalActiveGreenTint
 import vyacheslav.pogudin.intervaltimer.ui.theme.IntervalActiveOrangeTint
@@ -49,10 +47,34 @@ import vyacheslav.pogudin.intervaltimer.ui.theme.TextSecondary
 import vyacheslav.pogudin.intervaltimer.ui.theme.WorkoutStateBlue
 import vyacheslav.pogudin.intervaltimer.ui.theme.WorkoutStateGreen
 import vyacheslav.pogudin.intervaltimer.ui.theme.WorkoutStateOrange
-import vyacheslav.pogudin.intervaltimer.ui.workout.WorkoutPhase
 import vyacheslav.pogudin.intervaltimer.ui.workout.currentIntervalIndex
 import vyacheslav.pogudin.intervaltimer.ui.workout.formatMmSs
-import vyacheslav.pogudin.intervaltimer.ui.workout.remainingForIntervalAtIndex
+
+// Добавляем недостающую функцию
+private fun remainingForIntervalAtIndex(
+    intervalIndex: Int,
+    elapsed: Int,
+    intervals: List<Interval>,
+    totalTime: Int
+): Int {
+    if (intervalIndex !in intervals.indices) return 0
+    val capped = elapsed.coerceAtMost(totalTime)
+    var acc = 0
+    for (i in intervals.indices) {
+        val interval = intervals[i]
+        val start = acc
+        val end = acc + interval.time
+        if (i == intervalIndex) {
+            return when {
+                capped <= start -> interval.time
+                capped < end -> (end - capped).coerceAtLeast(0)
+                else -> 0
+            }
+        }
+        acc = end
+    }
+    return 0
+}
 
 private fun intervalsCountRu(n: Int): String {
     val word = when {
@@ -180,8 +202,8 @@ private fun IntervalRow(
         else -> BorderDefault.copy(alpha = 0.6f)
     }
 
-    // Толщина border: для активного интервала 2.dp, для остальных 1.dp
-    val borderWidth =  0.3.dp
+    // Толщина border
+    val borderWidth = 0.3.dp
 
     val durationColor = when {
         phase == WorkoutPhase.Ready && current -> WorkoutStateGreen  // Зеленый текст для Ready
@@ -230,7 +252,7 @@ private fun IntervalRow(
             .alpha(rowAlpha)
             .clip(RoundedCornerShape(16.dp))
             .background(IntervalRowSurface)
-            .border(borderWidth, borderColor, RoundedCornerShape(16.dp))  // Используем динамический border
+            .border(borderWidth, borderColor, RoundedCornerShape(16.dp))
             .then(
                 // Добавляем заполнение фона (только для Running/Paused)
                 if (progress > 0f && (phase == WorkoutPhase.Running || phase == WorkoutPhase.Paused)) {

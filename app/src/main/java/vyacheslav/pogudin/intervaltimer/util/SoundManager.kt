@@ -63,7 +63,7 @@ class SoundManager(context: Context) {
 
     private fun playSound(soundId: Int, attempt: Int = 0) {
         if (loadedSoundIds.contains(soundId)) {
-            soundPool.play(soundId, 0.1f, 0.1f, 1, 0, 1f)
+            soundPool.play(soundId, 0.01f, 0.01f, 1, 0, 1f)
             return
         }
 

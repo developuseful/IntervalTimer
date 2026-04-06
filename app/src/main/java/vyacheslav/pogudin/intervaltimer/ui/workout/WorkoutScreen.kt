@@ -33,15 +33,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,11 +46,10 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import vyacheslav.pogudin.intervaltimer.R
-import vyacheslav.pogudin.intervaltimer.domain.model.Interval
-import vyacheslav.pogudin.intervaltimer.util.SoundManager
+import vyacheslav.pogudin.intervaltimer.service.WorkoutPhase
 import vyacheslav.pogudin.intervaltimer.ui.theme.CardBg
 import vyacheslav.pogudin.intervaltimer.ui.theme.ErrorRed
 import vyacheslav.pogudin.intervaltimer.ui.theme.GreyLight
@@ -75,7 +68,7 @@ fun formatMmSs(totalSeconds: Int): String {
     return "$m:${s.toString().padStart(2, '0')}"
 }
 
-fun currentIntervalIndex(elapsed: Int, intervals: List<Interval>, totalTime: Int): Int {
+fun currentIntervalIndex(elapsed: Int, intervals: List<vyacheslav.pogudin.intervaltimer.domain.model.Interval>, totalTime: Int): Int {
     if (intervals.isEmpty()) return 0
     val capped = elapsed.coerceAtMost(totalTime)
     var acc = 0
@@ -87,41 +80,6 @@ fun currentIntervalIndex(elapsed: Int, intervals: List<Interval>, totalTime: Int
     return intervals.lastIndex
 }
 
-fun remainingForIntervalAtIndex(
-    intervalIndex: Int,
-    elapsed: Int,
-    intervals: List<Interval>,
-    totalTime: Int
-): Int {
-    if (intervalIndex !in intervals.indices) return 0
-    val capped = elapsed.coerceAtMost(totalTime)
-    var acc = 0
-    for (i in intervals.indices) {
-        val it = intervals[i]
-        val start = acc
-        val end = acc + it.time
-        if (i == intervalIndex) {
-            return when {
-                capped <= start -> it.time
-                capped < end -> (end - capped).coerceAtLeast(0)
-                else -> 0
-            }
-        }
-        acc = end
-    }
-    return 0
-}
-
-private fun remainingInCurrentInterval(
-    elapsed: Int,
-    intervals: List<Interval>,
-    totalTime: Int
-): Int {
-    if (intervals.isEmpty()) return 0
-    val idx = currentIntervalIndex(elapsed, intervals, totalTime)
-    return remainingForIntervalAtIndex(idx, elapsed, intervals, totalTime)
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkoutScreen(
@@ -129,10 +87,12 @@ fun WorkoutScreen(
     onBack: () -> Unit,
     onNewWorkout: () -> Unit = onBack
 ) {
-    val phase = vm.phase
+    val uiState by vm.uiState.collectAsStateWithLifecycle()
+
+    val phase = uiState.phase
     val intervals = vm.timer.intervals
     val total = vm.timer.totalTime
-    val elapsed = vm.elapsed
+    val elapsed = uiState.elapsed
 
     val accent = when (phase) {
         WorkoutPhase.Ready -> TextSecondary
@@ -160,7 +120,7 @@ fun WorkoutScreen(
         WorkoutPhase.Ready -> formatMmSs(total)
         WorkoutPhase.Finished -> "0:00"
         WorkoutPhase.Running, WorkoutPhase.Paused ->
-            formatMmSs(remainingInCurrentInterval(elapsed, intervals, total))
+            formatMmSs(uiState.remainingInInterval)
     }
 
     val footerText = when (phase) {
@@ -171,29 +131,6 @@ fun WorkoutScreen(
     }
 
     val progress = if (total > 0) elapsed / total.toFloat() else 0f
-
-    val context = LocalContext.current
-    val soundManager = remember { SoundManager(context) }
-    var previousPhase by remember { mutableStateOf(WorkoutPhase.Ready) }
-    var previousIntervalIndex by remember { mutableStateOf(-1) }
-    val currentInterval = currentIntervalIndex(elapsed, intervals, total)
-
-    LaunchedEffect(phase, currentInterval) {
-        when {
-            phase == WorkoutPhase.Running && previousPhase == WorkoutPhase.Ready -> soundManager.playStart()
-            phase == WorkoutPhase.Running && previousPhase == WorkoutPhase.Running &&
-                    currentInterval != previousIntervalIndex -> soundManager.playInterval()
-            phase == WorkoutPhase.Finished && previousPhase != WorkoutPhase.Finished -> soundManager.playEnd()
-        }
-        previousPhase = phase
-        previousIntervalIndex = currentInterval
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            soundManager.release()
-        }
-    }
 
     Scaffold(
         containerColor = ScreenBg,
@@ -266,7 +203,10 @@ fun WorkoutScreen(
                 onPause = { vm.pause() },
                 onResume = { vm.resume() },
                 onReset = { vm.reset() },
-                onNewWorkout = onNewWorkout,
+                onNewWorkout = {
+                    vm.stopAndUnbind()
+                    onNewWorkout()
+                },
                 modifier = Modifier.padding(16.dp)
             )
         }

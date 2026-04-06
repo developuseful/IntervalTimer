@@ -1,69 +1,123 @@
 package vyacheslav.pogudin.intervaltimer.ui.workout
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import android.os.IBinder
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import kotlin.math.min
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import vyacheslav.pogudin.intervaltimer.domain.model.Timer
-import vyacheslav.pogudin.intervaltimer.timer.TimerEngine
+import vyacheslav.pogudin.intervaltimer.service.TimerForegroundService
+import vyacheslav.pogudin.intervaltimer.timer.TimerState
+import vyacheslav.pogudin.intervaltimer.service.WorkoutPhase
 
-enum class WorkoutPhase {
-    Ready,
-    Running,
-    Paused,
-    Finished
-}
+class WorkoutViewModel(
+    application: Application,
+    val timer: Timer
+) : AndroidViewModel(application) {
 
-class WorkoutViewModel(val timer: Timer) : ViewModel() {
-    private val engine = TimerEngine()
+    private val _uiState = MutableStateFlow(WorkoutUiState())
+    val uiState: StateFlow<WorkoutUiState> = _uiState.asStateFlow()
 
-    var elapsed by mutableStateOf(0)
-    var running by mutableStateOf(false)
+    private var isBound = false
+    private var service: TimerForegroundService? = null
 
-    val phase: WorkoutPhase
-        get() = when {
-            timer.totalTime > 0 && elapsed >= timer.totalTime -> WorkoutPhase.Finished
-            running -> WorkoutPhase.Running
-            elapsed > 0 -> WorkoutPhase.Paused
-            else -> WorkoutPhase.Ready
+    // Исправленная реализация ServiceConnection
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            val binder = service as TimerForegroundService.TimerBinder
+            this@WorkoutViewModel.service = binder.getService()
+            this@WorkoutViewModel.service?.setTimer(timer)
+            isBound = true
+            startObservingService()
         }
 
+        override fun onServiceDisconnected(name: ComponentName?) {
+            service = null
+            isBound = false
+        }
+    }
+
     init {
+        bindService()
+    }
+
+    private fun bindService() {
+        val intent = Intent(getApplication(), TimerForegroundService::class.java)
+        getApplication<Application>().bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        getApplication<Application>().startService(intent)
+    }
+
+    private fun startObservingService() {
         viewModelScope.launch {
-            while (true) {
-                delay(100)
-                val rawSeconds = (engine.elapsed() / 1000).toInt()
-                elapsed = min(rawSeconds, timer.totalTime)
-                if (timer.totalTime > 0 && rawSeconds >= timer.totalTime && running) {
-                    engine.pause()
-                    running = false
-                }
+            service?.timerState?.collect { state ->
+                updateUiFromState(state)
             }
         }
     }
 
+    private fun updateUiFromState(state: TimerState) {
+        _uiState.value = WorkoutUiState(
+            elapsed = state.elapsedSeconds,
+            isRunning = state.isRunning,
+            phase = when {
+                timer.totalTime > 0 && state.elapsedSeconds >= timer.totalTime -> WorkoutPhase.Finished
+                state.isRunning -> WorkoutPhase.Running
+                state.elapsedSeconds > 0 -> WorkoutPhase.Paused
+                else -> WorkoutPhase.Ready
+            },
+            currentIntervalIndex = state.currentIntervalIndex,
+            remainingInInterval = state.remainingInInterval
+        )
+    }
+
     fun start() {
-        engine.start()
-        running = true
+        service?.startTimer()
     }
 
     fun pause() {
-        engine.pause()
-        running = false
+        service?.pauseTimer()
     }
 
     fun resume() {
-        engine.resume()
-        running = true
+        service?.resumeTimer()
     }
 
     fun reset() {
-        engine.reset()
-        running = false
-        elapsed = 0
+        service?.resetTimer()
+    }
+
+    fun stopAndUnbind() {
+        try {
+            getApplication<Application>().stopService(
+                Intent(getApplication(), TimerForegroundService::class.java)
+            )
+            if (isBound) {
+                getApplication<Application>().unbindService(connection)
+                isBound = false
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        service = null
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        stopAndUnbind()
     }
 }
+
+data class WorkoutUiState(
+    val elapsed: Int = 0,
+    val isRunning: Boolean = false,
+    val phase: WorkoutPhase = WorkoutPhase.Ready,
+    val currentIntervalIndex: Int = 0,
+    val remainingInInterval: Int = 0
+)

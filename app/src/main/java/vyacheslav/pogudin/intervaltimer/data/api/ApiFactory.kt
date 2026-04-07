@@ -4,6 +4,7 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
 
 object ApiFactory {
     fun create(): ApiService {
@@ -20,6 +21,9 @@ object ApiFactory {
                     .build()
                 chain.proceed(request)
             }
+            .connectTimeout(10, TimeUnit.SECONDS)      // таймаут подключения
+            .readTimeout(10, TimeUnit.SECONDS)         // таймаут чтения ответа
+            .writeTimeout(10, TimeUnit.SECONDS)        // таймаут записи запроса
             .build()
 
         return Retrofit.Builder()

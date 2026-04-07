@@ -16,8 +16,10 @@ import androidx.compose.runtime.setValue
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
-import vyacheslav.pogudin.intervaltimer.data.api.ApiFactory
-import vyacheslav.pogudin.intervaltimer.data.repository.TimerRepository
+import androidx.lifecycle.ViewModelProvider
+import vyacheslav.pogudin.intervaltimer.di.AppContainer
+import vyacheslav.pogudin.intervaltimer.di.LoadViewModelFactory
+import vyacheslav.pogudin.intervaltimer.di.WorkoutViewModelFactory
 import vyacheslav.pogudin.intervaltimer.domain.model.Timer
 import vyacheslav.pogudin.intervaltimer.ui.load.LoadScreen
 import vyacheslav.pogudin.intervaltimer.ui.load.LoadViewModel
@@ -38,33 +40,45 @@ class MainActivity : ComponentActivity() {
 
         super.onCreate(savedInstanceState)
 
+        // Инициализируем DI контейнер
+        AppContainer.initialize(this)
+
         // Запрашиваем разрешение на уведомления для Android 13+
         requestNotificationPermission()
-
-        val repo = TimerRepository(ApiFactory.create())
-        val loadVm = LoadViewModel(repo)
 
         setContent {
             var timer by remember { mutableStateOf<Timer?>(null) }
 
-            // Ключ заставляет пересоздать Composition при изменении timer
+            // Используем key(timer) чтобы пересоздать всю сцену при изменении
             key(timer) {
                 if (timer == null) {
-                    val repo = TimerRepository(ApiFactory.create())
-                    val loadVm = remember { LoadViewModel(repo) }
-                    LoadScreen(loadVm) { timer = it }
+                    // ✅ Каждый раз создаем НОВЫЙ LoadViewModel
+                    // Убираем remember() чтобы пересоздавать каждый раз
+                    val loadVm = ViewModelProvider(
+                        this@MainActivity,
+                        LoadViewModelFactory()
+                    )[LoadViewModel::class.java]
+                    
+                    // ✅ Очищаем состояние
+                    loadVm.clearState()
+                    
+                    LoadScreen(loadVm) { selectedTimer ->
+                        timer = selectedTimer
+                    }
                 } else {
                     val workoutVm = remember(timer) {
-                        WorkoutViewModel(application, timer!!)
+                        ViewModelProvider(
+                            this@MainActivity,
+                            WorkoutViewModelFactory(application, timer!!)
+                        )[WorkoutViewModel::class.java]
                     }
+                    
                     WorkoutScreen(
                         vm = workoutVm,
                         onBack = {
-                            workoutVm.stopAndUnbind()
                             timer = null
                         },
                         onNewWorkout = {
-                            workoutVm.stopAndUnbind()
                             timer = null
                         }
                     )

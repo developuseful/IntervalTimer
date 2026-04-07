@@ -13,13 +13,22 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import vyacheslav.pogudin.intervaltimer.domain.model.Timer
+import vyacheslav.pogudin.intervaltimer.domain.usecases.StartWorkoutUseCase
+import vyacheslav.pogudin.intervaltimer.domain.usecases.StopWorkoutUseCase
+import vyacheslav.pogudin.intervaltimer.domain.usecases.PauseWorkoutUseCase
+import vyacheslav.pogudin.intervaltimer.domain.usecases.ResumeWorkoutUseCase
+import vyacheslav.pogudin.intervaltimer.di.AppContainer
 import vyacheslav.pogudin.intervaltimer.service.TimerForegroundService
 import vyacheslav.pogudin.intervaltimer.timer.TimerState
 import vyacheslav.pogudin.intervaltimer.service.WorkoutPhase
 
 class WorkoutViewModel(
     application: Application,
-    val timer: Timer
+    val timer: Timer,
+    private val startWorkoutUseCase: StartWorkoutUseCase,
+    private val stopWorkoutUseCase: StopWorkoutUseCase,
+    private val pauseWorkoutUseCase: PauseWorkoutUseCase,
+    private val resumeWorkoutUseCase: ResumeWorkoutUseCase
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(WorkoutUiState())
@@ -33,8 +42,11 @@ class WorkoutViewModel(
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             val binder = service as TimerForegroundService.TimerBinder
             this@WorkoutViewModel.service = binder.getService()
-            this@WorkoutViewModel.service?.setTimer(timer)
             isBound = true
+            
+            // ✅ Важно! Уведомляем AppContainer что сервис подключился
+            AppContainer.setWorkoutService(this@WorkoutViewModel.service!!)
+            
             startObservingService()
         }
 
@@ -78,19 +90,19 @@ class WorkoutViewModel(
     }
 
     fun start() {
-        service?.startTimer()
+        startWorkoutUseCase(timer)
     }
 
     fun pause() {
-        service?.pauseTimer()
+        pauseWorkoutUseCase()
     }
 
     fun resume() {
-        service?.resumeTimer()
+        resumeWorkoutUseCase()
     }
 
     fun reset() {
-        service?.resetTimer()
+        stopWorkoutUseCase()
     }
 
     fun stopAndUnbind() {

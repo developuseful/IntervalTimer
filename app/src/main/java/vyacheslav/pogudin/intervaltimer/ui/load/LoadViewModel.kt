@@ -7,19 +7,29 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import vyacheslav.pogudin.intervaltimer.R
 import vyacheslav.pogudin.intervaltimer.data.repository.StubTimer
-import vyacheslav.pogudin.intervaltimer.data.repository.TimerRepository
 import vyacheslav.pogudin.intervaltimer.domain.model.Timer
+import vyacheslav.pogudin.intervaltimer.domain.usecases.LoadTimerUseCase
 import retrofit2.HttpException
 import java.io.IOException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 
-class LoadViewModel(private val repo: TimerRepository) : ViewModel() {
+class LoadViewModel(private val loadTimerUseCase: LoadTimerUseCase) : ViewModel() {
     var id by mutableStateOf("68")
     var loading by mutableStateOf(false)
     var errorResId by mutableStateOf<Int?>(null)
     var errorDetails by mutableStateOf<String?>(null)
     var timer by mutableStateOf<Timer?>(null)
+
+    /**
+     * Очистить состояние (например, при возврате с предыдущего экрана)
+     */
+    fun clearState() {
+        timer = null
+        errorResId = null
+        errorDetails = null
+        loading = false
+    }
 
     fun load() {
         viewModelScope.launch {
@@ -29,7 +39,11 @@ class LoadViewModel(private val repo: TimerRepository) : ViewModel() {
             errorDetails = null
             StubTimer.ENABLED = false
             try {
-                timer = repo.getTimer(id.toInt())
+                timer = loadTimerUseCase(id.toInt())
+            } catch (e: NumberFormatException) {
+                errorResId = R.string.error_invalid_id
+            } catch (e: IllegalArgumentException) {
+                errorResId = R.string.error_invalid_id
             } catch (e: SocketTimeoutException) {
                 errorResId = R.string.error_server_timeout
             } catch (e: ConnectException) {
@@ -45,8 +59,6 @@ class LoadViewModel(private val repo: TimerRepository) : ViewModel() {
                 }
             } catch (e: IOException) {
                 errorResId = R.string.error_network
-            } catch (e: NumberFormatException) {
-                errorResId = R.string.error_invalid_id
             } catch (e: Exception) {
                 errorResId = R.string.error_unknown
                 errorDetails = e.localizedMessage
@@ -68,6 +80,8 @@ class LoadViewModel(private val repo: TimerRepository) : ViewModel() {
             errorResId = null
             errorDetails = null
             try {
+                // ✅ Включаем StubTimer перед загрузкой
+                StubTimer.ENABLED = true
                 timer = StubTimer.sample
             } catch (e: Exception) {
                 errorResId = R.string.error_unknown

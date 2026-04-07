@@ -35,6 +35,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -88,6 +89,13 @@ fun WorkoutScreen(
     onNewWorkout: () -> Unit = onBack
 ) {
     val uiState by vm.uiState.collectAsStateWithLifecycle()
+
+    // ✅ Очищаем ViewModel когда выходим с экрана
+    DisposableEffect(Unit) {
+        onDispose {
+            vm.stopAndUnbind()
+        }
+    }
 
     val phase = uiState.phase
     val intervals = vm.timer.intervals

@@ -21,9 +21,9 @@ object ApiFactory {
                     .build()
                 chain.proceed(request)
             }
-            .connectTimeout(10, TimeUnit.SECONDS)      // таймаут подключения
-            .readTimeout(10, TimeUnit.SECONDS)         // таймаут чтения ответа
-            .writeTimeout(10, TimeUnit.SECONDS)        // таймаут записи запроса
+            .connectTimeout(5, TimeUnit.SECONDS)      // таймаут подключения
+            .readTimeout(5, TimeUnit.SECONDS)         // таймаут чтения ответа
+            .writeTimeout(5, TimeUnit.SECONDS)        // таймаут записи запроса
             .build()
 
         return Retrofit.Builder()

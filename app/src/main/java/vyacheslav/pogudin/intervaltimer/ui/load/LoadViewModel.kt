@@ -2,21 +2,23 @@ package vyacheslav.pogudin.intervaltimer.ui.load
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.launch
 import androidx.compose.runtime.*
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import vyacheslav.pogudin.intervaltimer.R
 import vyacheslav.pogudin.intervaltimer.data.repository.StubTimer
 import vyacheslav.pogudin.intervaltimer.data.repository.TimerRepository
 import vyacheslav.pogudin.intervaltimer.domain.model.Timer
 import retrofit2.HttpException
-import java.net.SocketTimeoutException
-import java.net.ConnectException
 import java.io.IOException
+import java.net.ConnectException
+import java.net.SocketTimeoutException
 
 class LoadViewModel(private val repo: TimerRepository) : ViewModel() {
     var id by mutableStateOf("68")
     var loading by mutableStateOf(false)
-    var error by mutableStateOf<String?>(null)
+    var errorResId by mutableStateOf<Int?>(null)
+    var errorDetails by mutableStateOf<String?>(null)
     var timer by mutableStateOf<Timer?>(null)
     var useTestWorkout by mutableStateOf(StubTimer.ENABLED)
 
@@ -24,25 +26,30 @@ class LoadViewModel(private val repo: TimerRepository) : ViewModel() {
         viewModelScope.launch {
             loading = true
             delay(1000)
-            error = null
+            errorResId = null
+            errorDetails = null
             try {
                 timer = repo.getTimer(id.toInt())
             } catch (e: SocketTimeoutException) {
-                error = "Сервер не отвечает. Проверьте подключение или повторите попытку."
+                errorResId = R.string.error_server_timeout
             } catch (e: ConnectException) {
-                error = "Ошибка подключения. Проверьте сеть и адрес сервера."
+                errorResId = R.string.error_connect
             } catch (e: HttpException) {
-                error = when (e.code()) {
-                    404 -> "Тренировка не найдена. Проверьте ID."
-                    500, 502, 503 -> "Сервер недоступен. Повторите попытку позже."
-                    else -> "Ошибка сервера (${e.code()}). Повторите попытку."
+                errorResId = when (e.code()) {
+                    404 -> R.string.error_not_found
+                    500, 502, 503 -> R.string.error_server_unavailable
+                    else -> R.string.error_server
+                }
+                if (errorResId == R.string.error_server) {
+                    errorDetails = e.code().toString()
                 }
             } catch (e: IOException) {
-                error = "Ошибка сети. Проверьте подключение к интернету."
+                errorResId = R.string.error_network
             } catch (e: NumberFormatException) {
-                error = "ID должен быть числом."
+                errorResId = R.string.error_invalid_id
             } catch (e: Exception) {
-                error = "Неизвестная ошибка: ${e.localizedMessage ?: "попробуйте позже"}"
+                errorResId = R.string.error_unknown
+                errorDetails = e.localizedMessage
             } finally {
                 loading = false
             }
@@ -50,7 +57,8 @@ class LoadViewModel(private val repo: TimerRepository) : ViewModel() {
     }
 
     fun clearError() {
-        error = null
+        errorResId = null
+        errorDetails = null
     }
 
     fun updateTestWorkout(enabled: Boolean) {

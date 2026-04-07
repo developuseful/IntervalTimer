@@ -1,3 +1,19 @@
 <resources>
     <string name="app_name">Interval Timer</string>
+    <string name="load_title">Интервальный\nтаймер</string>
+    <string name="load_description">Введите ID тренировки для загрузки программы интервалов</string>
+    <string name="load_id_label">ID тренировки</string>
+    <string name="load_button">Загрузить</string>
+    <string name="retry_button">Повторить</string>
+    <string name="loading">Загрузка...</string>
+    <string name="use_test_workout">Использовать тестовую тренировку</string>
+    <string name="error_server_timeout">Сервер не отвечает. Проверьте подключение или повторите попытку.</string>
+    <string name="error_connect">Ошибка подключения. Проверьте сеть и адрес сервера.</string>
+    <string name="error_not_found">Тренировка не найдена. Проверьте ID.</string>
+    <string name="error_server_unavailable">Сервер недоступен. Повторите попытку позже.</string>
+    <string name="error_server">Ошибка сервера (%1$s). Повторите попытку.</string>
+    <string name="error_network">Ошибка сети. Проверьте подключение к интернету.</string>
+    <string name="error_invalid_id">ID должен быть числом.</string>
+    <string name="error_unknown">Неизвестная ошибка: %1$s</string>
+    <string name="try_later">попробуйте позже</string>
 </resources>

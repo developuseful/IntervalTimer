@@ -8,22 +8,18 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.NewReleases
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.lifecycle.ViewModel
+import vyacheslav.pogudin.intervaltimer.R
 import vyacheslav.pogudin.intervaltimer.domain.model.Timer
 import vyacheslav.pogudin.intervaltimer.ui.theme.BorderDefault
 import vyacheslav.pogudin.intervaltimer.ui.theme.BorderError
@@ -44,13 +40,23 @@ fun LoadScreen(
 ) {
     vm.timer?.let { onLoaded(it) }
 
+    val errorText = vm.errorResId?.let { resId ->
+        if (resId == R.string.error_unknown) {
+            stringResource(
+                R.string.error_unknown,
+                vm.errorDetails ?: stringResource(R.string.try_later)
+            )
+        } else {
+            stringResource(resId)
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(ScreenBg)
             .padding(vertical = 130.dp),
-
-        ) {
+    ) {
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
@@ -62,7 +68,7 @@ fun LoadScreen(
                     .shadow(
                         elevation = 8.dp,
                         shape = RoundedCornerShape(16.dp),
-                        spotColor = GreenShadow.copy(alpha = 0.8f),  // цвет тени с прозрачностью
+                        spotColor = GreenShadow.copy(alpha = 0.8f),
                         ambientColor = GreenShadow.copy(alpha = 0.8f)
                     )
                     .background(GreenPrimary, RoundedCornerShape(16.dp)),
@@ -78,9 +84,8 @@ fun LoadScreen(
 
             Spacer(Modifier.height(20.dp))
 
-            // Заголовок
             Text(
-                text = "Интервальный\nтаймер",
+                text = stringResource(R.string.load_title),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
@@ -89,9 +94,8 @@ fun LoadScreen(
 
             Spacer(Modifier.height(8.dp))
 
-            // Описание
             Text(
-                text = "Введите ID тренировки для загрузки программы интервалов",
+                text = stringResource(R.string.load_description),
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
                 color = TextSecondary
@@ -106,7 +110,7 @@ fun LoadScreen(
             ) {
 
                 Text(
-                    text = "ID тренировки",
+                    text = stringResource(R.string.load_id_label),
                     style = MaterialTheme.typography.labelMedium,
                     textAlign = TextAlign.Start,
                     fontWeight = FontWeight.Medium,
@@ -116,9 +120,7 @@ fun LoadScreen(
 
                 CustomOutlinedTextField(vm)
 
-
-                // Ошибка
-                vm.error?.let {
+                errorText?.let {
                     Spacer(Modifier.height(8.dp))
                     Row(Modifier.fillMaxWidth()) {
                         Icon(
@@ -129,7 +131,7 @@ fun LoadScreen(
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            text = vm.error!!,
+                            text = it,
                             style = MaterialTheme.typography.labelMedium,
                             textAlign = TextAlign.Start,
                             fontWeight = FontWeight.Medium,
@@ -140,7 +142,6 @@ fun LoadScreen(
 
                 Spacer(Modifier.height(20.dp))
 
-                // Кнопка
                 Button(
                     onClick = { vm.load() },
                     enabled = !vm.loading,
@@ -166,25 +167,28 @@ fun LoadScreen(
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = "Загрузка...",
+                            text = stringResource(R.string.loading),
                             color = GreenLite
                         )
                     } else {
-                        Text(if (vm.error != null) "Повторить" else "Загрузить")
+                        Text(
+                            text = if (vm.errorResId != null) {
+                                stringResource(R.string.retry_button)
+                            } else {
+                                stringResource(R.string.load_button)
+                            }
+                        )
                     }
                 }
                 Spacer(Modifier.height(20.dp))
 
-                // Переключатель тестовой тренировки
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                        //.padding(horizontal = 28.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "Использовать тестовую тренировку",
+                        text = stringResource(R.string.use_test_workout),
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextPrimary
                     )
@@ -213,14 +217,14 @@ fun CustomOutlinedTextField(
     // Обработчик изменения фокуса
     val onFocusChange = { focused: Boolean ->
         // При получении фокуса сбрасываем ошибку
-        if (focused && vm.error != null) {
+        if (focused && vm.errorResId != null) {
             vm.clearError() // Метод в вашей ViewModel
         }
     }
 
     // Определяем цвет обводки
     val borderColor = when {
-        vm.error != null -> BorderError
+        vm.errorResId != null -> BorderError
         else -> BorderDefault
     }
 
@@ -229,7 +233,7 @@ fun CustomOutlinedTextField(
         onValueChange = {
             vm.id = it
             // Опционально: сбрасываем ошибку при вводе текста
-            if (vm.error != null) {
+            if (vm.errorResId != null) {
                 vm.clearError()
             }
         },

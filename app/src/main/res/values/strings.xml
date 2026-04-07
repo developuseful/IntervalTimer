@@ -4,6 +4,7 @@
     <string name="load_description">Введите ID тренировки для загрузки программы интервалов</string>
     <string name="load_id_label">ID тренировки</string>
     <string name="load_button">Загрузить</string>
+    <string name="load_test_workout">Загрузить тестовую тренировку</string>
     <string name="retry_button">Повторить</string>
     <string name="loading">Загрузка...</string>
     <string name="use_test_workout">Использовать тестовую тренировку</string>

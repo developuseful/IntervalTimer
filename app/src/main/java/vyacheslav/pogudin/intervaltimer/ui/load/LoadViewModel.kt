@@ -20,7 +20,6 @@ class LoadViewModel(private val repo: TimerRepository) : ViewModel() {
     var errorResId by mutableStateOf<Int?>(null)
     var errorDetails by mutableStateOf<String?>(null)
     var timer by mutableStateOf<Timer?>(null)
-    var useTestWorkout by mutableStateOf(StubTimer.ENABLED)
 
     fun load() {
         viewModelScope.launch {
@@ -28,6 +27,7 @@ class LoadViewModel(private val repo: TimerRepository) : ViewModel() {
             delay(1000)
             errorResId = null
             errorDetails = null
+            StubTimer.ENABLED = false
             try {
                 timer = repo.getTimer(id.toInt())
             } catch (e: SocketTimeoutException) {
@@ -61,8 +61,20 @@ class LoadViewModel(private val repo: TimerRepository) : ViewModel() {
         errorDetails = null
     }
 
-    fun updateTestWorkout(enabled: Boolean) {
-        useTestWorkout = enabled
-        StubTimer.ENABLED = enabled
+    fun loadTestWorkout() {
+        viewModelScope.launch {
+            loading = true
+            delay(1000)
+            errorResId = null
+            errorDetails = null
+            try {
+                timer = StubTimer.sample
+            } catch (e: Exception) {
+                errorResId = R.string.error_unknown
+                errorDetails = e.localizedMessage
+            } finally {
+                loading = false
+            }
+        }
     }
 }

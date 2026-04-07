@@ -182,26 +182,39 @@ fun LoadScreen(
                 }
                 Spacer(Modifier.height(20.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                Button(
+                    onClick = { vm.loadTestWorkout() },
+                    enabled = !vm.loading,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    border = if (vm.loading) {
+                        BorderStroke(1.dp, GreenLite)
+                    } else {
+                        null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = GreenPrimary,
+                        disabledContainerColor = ButtonLoadState.copy(alpha = 1f)
+                    )
                 ) {
-                    Text(
-                        text = stringResource(R.string.use_test_workout),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextPrimary
-                    )
-                    Switch(
-                        checked = vm.useTestWorkout,
-                        onCheckedChange = { vm.updateTestWorkout(it) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = GreenPrimary,
-                            uncheckedThumbColor = Color.White,
-                            uncheckedTrackColor = Color.Gray
+                    if (vm.loading) {
+                        CircularProgressIndicator(
+                            color = GreenLite,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(18.dp)
                         )
-                    )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.loading),
+                            color = GreenLite
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(R.string.load_test_workout)
+                        )
+                    }
                 }
             }
 

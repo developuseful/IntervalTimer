@@ -9,6 +9,7 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -46,23 +47,28 @@ class MainActivity : ComponentActivity() {
         setContent {
             var timer by remember { mutableStateOf<Timer?>(null) }
 
-            if (timer == null) {
-                LoadScreen(loadVm) { timer = it }
-            } else {
-                val workoutVm = remember(timer) {
-                    WorkoutViewModel(application, timer!!)
-                }
-                WorkoutScreen(
-                    vm = workoutVm,
-                    onBack = {
-                        workoutVm.stopAndUnbind()
-                        timer = null
-                    },
-                    onNewWorkout = {
-                        workoutVm.stopAndUnbind()
-                        timer = null
+            // Ключ заставляет пересоздать Composition при изменении timer
+            key(timer) {
+                if (timer == null) {
+                    val repo = TimerRepository(ApiFactory.create())
+                    val loadVm = remember { LoadViewModel(repo) }
+                    LoadScreen(loadVm) { timer = it }
+                } else {
+                    val workoutVm = remember(timer) {
+                        WorkoutViewModel(application, timer!!)
                     }
-                )
+                    WorkoutScreen(
+                        vm = workoutVm,
+                        onBack = {
+                            workoutVm.stopAndUnbind()
+                            timer = null
+                        },
+                        onNewWorkout = {
+                            workoutVm.stopAndUnbind()
+                            timer = null
+                        }
+                    )
+                }
             }
         }
     }
